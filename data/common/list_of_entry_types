@@ -1,0 +1,104 @@
+article
+An article in a journal, magazine, newspaper, or other periodical which forms a
+self-contained unit with its own title. The title of the periodical is given in the
+journaltitle field. If the issue has its own title in addition to the main title of
+the periodical, it goes in the issuetitle field. Note that editor and related
+fields refer to the journal while translator and related fields refer to the article.
+Required fields: author, title, journa, year/date
+Optional fields: translator, annotator, commentator, subtitle,
+titleaddon, editor, editora, editorb, editorc, journalsubtitle,
+journaltitleaddon, issuetitle, issuesubtitle,
+issuetitleaddon, language, origlanguage, series, volume,
+number, eid, issue, month, pages, version, note, issn, addendum,
+pubstate, doi, eprint, eprintclass, eprinttype, url, urldate
+
+book
+Required fields: author, title, year/date
+Optional fields: editor, editora, editorb, editorc, translator,
+annotator, commentator, introduction, foreword, afterword,
+subtitle, titleaddon, maintitle, mainsubtitle, maintitleaddon,
+language, origlanguage, volume, part, edition, volumes, series,
+number, note, publisher, location, isbn, eid, chapter, pages,
+pagetotal, addendum, pubstate, doi, eprint, eprintclass,
+eprinttype, url, urldate
+
+dataset
+A data set or a similar collection of (mostly) raw data.
+Required fields: author/editor, title, year/date
+Optional fields: subtitle, titleaddon, language, edition, type,
+series, number, version, note, organization, publisher,
+location, addendum, pubstate, doi, eprint, eprintclass,
+eprinttype, url, urldate
+
+misc
+A fallback type for entries which do not fit into any other category. Use the field
+howpublished to supply publishing information in free format, if applicable. The
+field type may be useful as well. author, editor, and year are omissible in
+terms of § 2.3.2.
+Required fields: author/editor, title, year/date
+Optional fields: subtitle, titleaddon, language, howpublished,
+type, version, note, organization, location, month, addendum,
+pubstate, doi, eprint, eprintclass, eprinttype, url, urldate
+
+proceedings
+A single-volume conference proceedings. This type is very similar to @collection.
+It supports an optional organization field which holds the sponsoring institution.
+The editor is omissible in terms of § 2.3.2.
+Required fields: title, year/date
+Optional fields: editor, subtitle, titleaddon, maintitle,
+mainsubtitle, maintitleaddon, eventtitle, eventtitleaddon,
+eventdate, venue, language, volume, part, volumes, series,
+number, note, organization, publisher, location, month, isbn,
+eid, chapter, pages, pagetotal, addendum, pubstate, doi, eprint,
+eprintclass, eprinttype, url, urldate
+
+inproceedings
+An article in a conference proceedings. This type is similar to @incollection. It supports an optional organization field.
+Requiredfields: author,title,booktitle,year/date
+Optionalfields: editor,subtitle,titleaddon,maintitle, mainsubtitle, maintitleaddon, booksubtitle, booktitleaddon, eventtitle, eventtitleaddon, eventdate, venue, language, volume, part, volumes, series, number, note, organization, publisher, location, month, isbn, eid, chapter, pages, addendum, pubstate, doi, eprint, eprintclass, eprinttype, url, urldate
+
+report
+A technical report, research report, or white paper published by a university or some
+other institution. Use the type field to specify the type of report. The sponsoring
+institution goes in the institution field.
+Required fields: author, title, type, institution, year/date
+Optional fields: subtitle, titleaddon, language, number, version,
+note, location, month, isrn, eid, chapter, pages, pagetotal,
+addendum, pubstate, doi, eprint, eprintclass, eprinttype, url,
+urldate
+
+techreport
+*report
+
+thesis
+A thesis written for an educational institution to satisfy the requirements for a degree.
+Use the type field to specify the type of thesis.
+Required fields: author, title, type, institution, year/date
+Optional fields: subtitle, titleaddon, language, note, location,
+month, isbn, eid, chapter, pages, pagetotal, addendum, pubstate,
+doi, eprint, eprintclass, eprinttype, url, urldate
+
+unpublished
+A work with an author and a title which has not been formally published, such as
+a manuscript or the script of a talk. Use the fields howpublished and note to
+supply additional information in free format, if applicable.
+Required fields: author, title, year/date
+Optional fields: subtitle, titleaddon, type, eventtitle,
+eventtitleaddon, eventdate, venue, language, howpublished,
+note, location, isbn, month, addendum, pubstate, doi, eprint,
+eprintclass, eprinttype, url, urldate
+
+mastersthesis
+*thesis
+Similar to @thesis except that the type field is optional and defaults to the
+localised term ‘Master’s thesis’. You may still use the type field to override that.
+
+phdthesis
+*thesis
+Similar to @thesis except that the type field is optional and defaults to the
+localised term ‘PhD thesis’. You may still use the type field to override that.
+
+techreport
+*report
+Similar to @report except that the type field is optional and defaults to the
+localised term ‘technical report’. You may still use the type field to override that.
