@@ -5,20 +5,22 @@ import inspect
 
 class bib_manager:
 
-    def __init__(self, input_file_name=""):
+    def __init__(self, user_input=""):
         self.sendout_process = True
         self.sendout_warning = True
         self.sendout_debug   = False
         self.init()
         input_number = -1
-        if input_file_name.isdigit() and len(input_file_name)==0:
-            input_number = int(input_file_name)
-            input_file_name = ""
-        if input_file_name:
-            if input_file_name.endswith(".ris"):
-                self.parse_ris(input_file_name)
+        if user_input.isdigit() and len(user_input)==1:
+            input_number = int(user_input)
+            user_input = ""
+        if user_input:
+            if user_input.endswith(".ris"):
+                self.parse_ris(user_input)
+            elif user_input.endswith(".json"):
+                self.parse_json(user_input)
             else:
-                self.parse_bibtex(input_file_name)
+                self.parse_bibtex(user_input)
         else:
              self.run_manager(input_number)
 
@@ -191,8 +193,20 @@ python3 bib_manager.py 1                # to navigate database""")
         pass
 
     def navigate_database(self):
+        navigate_options = ["bibname", "bibnumber", "bibtype", "bibtag", "collaboration"]
+        for idx, option in enumerate(navigate_options):
+            self.print_list(f"{f'{idx})':>3}",option)
+        question = "Enter option from above: "
+        user_input = self.input_question(question)
         #files_in_directory = os.listdir("data/json/")
         pass
+
+    def parse_json(self, user_input):
+        self.clear_fields()
+        with open(user_input,'r') as file_json:
+            self.bib_fields = json.load(file_json)
+        #self.print_all_fields()
+        self.confirm_entry()
 
     def parse_ris(self, input_file_name):
         f1 = open(input_file_name,'r')
@@ -207,7 +221,7 @@ python3 bib_manager.py 1                # to navigate database""")
             field_title = line.split('-')[0].strip()
             field_value = line.split('-')[1].strip()
             if field_title=="ER":
-                self.print_info(f'end of {input_file_name}')
+                self.print_info(f'End of {input_file_name}')
                 self.finalize_entry()
                 self.confirm_entry()
                 self.write_entry()
@@ -245,7 +259,6 @@ python3 bib_manager.py 1                # to navigate database""")
                 if field_title=="@":
                     found_aa = True
                     break
-                #self.print_list(f"+field:", f"{field_title:15} > {field_value}")
                 self.print_debug(f"{field_title:15} > {field_value}")
                 if self.sendout_debug:
                     line_example = lines
@@ -253,7 +266,7 @@ python3 bib_manager.py 1                # to navigate database""")
                         line_example = lines[:20].strip() + " ..."
                     self.print_process(f"    -->   {line_example}")
                 self.make_field(field_title, field_value)
-            self.print_info(f'end of {input_file_name}')
+            self.print_info(f'End of {input_file_name}')
             self.finalize_entry()
             self.confirm_entry()
             self.write_entry()
@@ -265,7 +278,7 @@ python3 bib_manager.py 1                # to navigate database""")
         if "bibname" in self.bib_fields:
             file_name_json = f'data/json/{self.bib_fields["bibname"]}.json'
             with open(file_name_json,'w') as file_json:
-                self.print_info(f'writting {file_name_json}')
+                self.print_info(f'Writting {file_name_json}')
                 json.dump(self.bib_fields,file_json)
                 file_json.close()
         if "numbering" in self.bib_fields:
@@ -281,7 +294,7 @@ python3 bib_manager.py 1                # to navigate database""")
             next_number = max_number + 1
             file_name_numbering = f'data/numbering/{next_number}_{self.bib_fields["bibname"]}'
             with open(file_name_numbering,'w') as file_numbering:
-                self.print_info(f'touch {file_name_numbering}')
+                self.print_info(f'Touch {file_name_numbering}')
                 pass
         if "collaboration" in self.bib_fields:
             directory_path = f'data/collaboration'
@@ -290,7 +303,7 @@ python3 bib_manager.py 1                # to navigate database""")
                 os.makedirs(directory_path, exist_ok=True)
                 file_name_collaboration = f'{directory_path}/{self.bib_fields["bibname"]}'
                 with open(file_name_collaboration,'w') as file_collaboration:
-                    self.print_info(f'touch {file_name_collaboration}')
+                    self.print_info(f'Touch {file_name_collaboration}')
                     pass
         if "bibtag" in self.bib_fields:
             for tag1 in self.bib_fields["bibtag"]:
@@ -299,7 +312,7 @@ python3 bib_manager.py 1                # to navigate database""")
                 os.makedirs(directory_path, exist_ok=True)
                 file_name_tag1 = f'{directory_path}/{self.bib_fields["bibname"]}'
                 with open(file_name_tag1,'w') as file_tag1:
-                    self.print_info(f'touch {file_name_tag1}')
+                    self.print_info(f'Touch {file_name_tag1}')
                     pass
         if "author" in self.bib_fields:
             author1 = self.bib_fields["author"][0]
@@ -309,12 +322,12 @@ python3 bib_manager.py 1                # to navigate database""")
                 os.makedirs(directory_path, exist_ok=True)
                 file_name_author = f'{directory_path}/{self.bib_fields["bibname"]}'
                 with open(file_name_author,'w') as file_author:
-                    self.print_info(f'touch {file_name_author}')
+                    self.print_info(f'Touch {file_name_author}')
                     pass
 
 
     def confirm_entry(self):
-        self.print_info("confirm_entry")
+        self.print_info("Confirm Entry")
         self.make_bib_name()
         self.print_all_fields()
         question = f"Enter field index to modify the content [index / enter:confirm(continue) / q:quit]: "
@@ -341,7 +354,7 @@ python3 bib_manager.py 1                # to navigate database""")
         self.make_bib_name()
 
     def finalize_entry(self):
-        self.print_info(f"finalize_entry")
+        self.print_info(f"Finalize entry")
         bib_is_arxiv = False
         if self.bib_fields["bibtype"]=="inproceedings":
             if "archiveprefix" in self.bib_fields:
@@ -617,10 +630,17 @@ python3 bib_manager.py 1                # to navigate database""")
         self.bib_fields["bibname"] = ""
         self.bib_fields["bibnumber"] = -1
         self.bib_fields["bibtype"] = type_name
-        self.bib_fields["eots"] = "" # experiment, theory, observation, simulation
-        self.bib_fields["ptds"] = "" # physics, technical, detector, software
         self.bib_fields["bibtag"] = [""]
         self.bib_fields["collaboration"] = ["","",""]
+        #self.bib_fields["physics"] = []
+        #self.bib_fields["reaction"] = [[]]
+        #self.bib_fields["beam-energy"] = [[]]
+        #self.bib_fields["detector"] = [[]]
+        #self.bib_fields["experiment"] = []
+        #self.bib_fields["theory"] = []
+        #self.bib_fields["observation"] = []
+        #self.bib_fields["observable"] = []
+        #self.bib_fields["sim-tool"] = []
         self.bib_fields["oldname"] = ""
         if type_name in self.required_fields:
             for field in self.required_fields[type_name]:
@@ -642,7 +662,6 @@ python3 bib_manager.py 1                # to navigate database""")
     def make_ris_field(self, field_title, field_value):
         field_value = self.configure_ris_field_value(field_title, field_value)
         field_title = self.configure_ris_field_title(field_title)
-        #self.print_list(f"+field:", f"{field_title:15} > {field_value}")
         self.print_debug(f"{field_title:15} > {field_value}")
         self.make_field(field_title, field_value)
         
