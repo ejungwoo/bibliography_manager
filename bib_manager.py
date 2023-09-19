@@ -16,9 +16,9 @@ class bib_manager:
             input_file_name = ""
         if input_file_name:
             if input_file_name.endswith(".ris"):
-                self.read_ris(input_file_name)
+                self.parse_ris(input_file_name)
             else:
-                self.read_bibtex(input_file_name)
+                self.parse_bibtex(input_file_name)
         else:
              self.run_manager(input_number)
 
@@ -26,14 +26,20 @@ class bib_manager:
         self.clear_fields()
         self.collaboration_list = []
         self.journal_list = []
+        self.dictionary_of_ris_formats = {}
         self.required_fields = {}
         self.optional_fields = {}
         self.read_list_of_journals()
         self.read_list_of_entry_types()
         self.read_list_of_collaborations()
+        self.read_list_of_ris_formats()
 
     def clear_fields(self):
         self.bib_fields = {}
+
+    def exit_bib_manager(self):
+        print_info(f"exit from {inspect.getframeinfo(inspect.stack()[1][0]).function})")
+        exit()
 
     def input_question(self, question):
         user_input = input(f"\033[0;36m=== {question}\033[0m").strip()
@@ -41,33 +47,28 @@ class bib_manager:
 
     def print_process(self, content, always_sendout=False, make_block=False):
         if make_block:
-            content = f"""__________________________________________________________________________________________________
-{content.strip()}
-__________________________________________________________________________________________________"""
+            line_break = "____________________________________________________________________________________"
+            content = f"{line_break}\n{content.strip()}\n{line_break}"
         if self.sendout_process or always_sendout:
             print(f'{content}')
 
-    def print_info(self, content, always_sendout=False):
-        if self.sendout_process or always_sendout:
-            print(f'\033[0;32m*** {content}\033[0m')
-
-    def print_warning(self, content, always_sendout=False):
-        if self.sendout_warning or always_sendout:
-            print(f'\033[0;33mwarning! {content}\033[0m')
-
-    def print_error(self, content, always_sendout=False):
-        if self.sendout_error or always_sendout:
-            print(f'\033[0;31merror! {content}\033[0m')
+    def print_info   (self, content, always_sendout=False): print(f'\033[0;32m***\033[0m {content}')      if (self.sendout_process or always_sendout) else 0
+    def print_warning(self, content, always_sendout=False): print(f'\033[0;32mwarning!\033[0m {content}') if (self.sendout_warning or always_sendout) else 0
+    def print_error  (self, content, always_sendout=False): print(f'\033[0;32merror!\033[0m {content}')   if (self.sendout_error   or always_sendout) else 0
+    def print_list   (self, tt, val, always_sendout=False): print(f'\033[0;34m{tt}\033[0m {val}')    if (self.sendout_process or always_sendout) else 0
 
     def print_debug(self, content, always_sendout=False):
         callerframerecord = inspect.stack()[1]
         frame = callerframerecord[0]
         info = inspect.getframeinfo(frame)
         if self.sendout_debug or always_sendout:
-            script_name = os.path.basename(__file__)
-            #print(f"+{info.lineno} {info.filename} # ({info.function}) {content}")
-            print(f"\033[0;36m+{info.lineno} {info.filename} # ({info.function}) {content}\033[0;36m#\033[0m")
-            #std::cout<<"+\033[0;36m"<<Form("%d ",line)<<"\033[0m "<<Form("%s \033[0;36m#\033[0m ", title.c_str());
+            print(f"\033[0;36m+{info.lineno} {info.filename} \033[0;36m# ({info.function})\033[0m {content}")
+
+    def print_always(self, content, always_sendout=False):
+        callerframerecord = inspect.stack()[1]
+        frame = callerframerecord[0]
+        info = inspect.getframeinfo(frame)
+        print(f"\033[0;36m+{info.lineno} {info.filename} \033[0;36m# ({info.function})\033[0m {content}")
 
     def print_all_fields(self):
         self.print_info(f'Printing fields of {self.bib_fields["bibname"]}  ({self.bib_fields["oldname"]})')
@@ -77,8 +78,8 @@ ________________________________________________________________________________
             list_of_keys.append(key_name)
 
     def print_field(self, key, idx=-1):
-        if idx>=0: self.print_process(f"{idx:>2}) {key:20}{self.bib_fields[key]}")
-        else:      self.print_process(f"{'':>2}> {key:20}{self.bib_fields[key]}")
+        if idx>=0: self.print_list(f"{str(idx)+')':>3}", f"{key:20}{self.bib_fields[key]}")
+        else:      self.print_list(f"{'>':>3}",  f"{key:20}{self.bib_fields[key]}")
 
     def read_list_of_entry_types(self):
         f1 = open('data/common/list_of_entry_types','r')
@@ -146,6 +147,15 @@ ________________________________________________________________________________
                 if len(full_name)>0:
                     self.collaboration_list.append([full_name, minimum_name, short_name])
 
+    def read_list_of_ris_formats(self):
+        with open('data/common/list_of_ris_formats','r') as f1:
+            lines = f1.readlines()
+            for line in lines:
+                line = line.strip()
+                title_in_ris, title_in_bibtex = line.split()
+                self.print_debug(f"{title_in_ris} {title_in_bibtex}")
+                self.dictionary_of_ris_formats[title_in_ris] = title_in_bibtex
+
     def read_list_of_journals(self):
         with open('data/common/list_of_journals','r') as f1:
             lines = f1.readlines()
@@ -157,20 +167,15 @@ ________________________________________________________________________________
                 if len(full_name)>0:
                     self.journal_list.append([full_name, minimum_name, short_name])
 
-    def read_ris(self, input_file_name):
-        pass
-
     def run_manager(self, input_number=-1):
         self.print_info("Usage of Bibliography Manager")
         options = ["0","1","q"]
         self.print_process("""python3 bib_manager.py bibtex_file.bib  # to write database for bibtex file "bibtex_file.bib" : 
 python3 bib_manager.py 0                # to write database from raw
 python3 bib_manager.py 1                # to navigate database""")
-        list_options = f"""
- 0) Write database from raw
- 1) Navigate
- q) Quite"""
-        self.print_process(list_options)
+        self.print_list(f"{'0)':>3}","Write database from raw")
+        self.print_list(f"{'1)':>3}","Navigate")
+        self.print_list(f"{'q)':>3}","Quite")
         question = "Enter option from above: "
         user_input = self.input_question(question)
         if not user_input:
@@ -178,7 +183,7 @@ python3 bib_manager.py 1                # to navigate database""")
         if user_input in options:
             if user_input=="q":
                 self.print_info("QUIT!")
-                exit()
+                self.exit_bib_manager()
             if user_input=="0": self.write_database_from_raw()
             if user_input=="1": self.navigate_database()
 
@@ -189,7 +194,29 @@ python3 bib_manager.py 1                # to navigate database""")
         #files_in_directory = os.listdir("data/json/")
         pass
 
-    def read_bibtex(self, input_file_name):
+    def parse_ris(self, input_file_name):
+        f1 = open(input_file_name,'r')
+        while True:
+            line = f1.readline()
+            if not line: break
+            line = line.strip()
+            if line.find("-")<0:
+                self.print_error(f'cannot find "-"!')
+                self.print_error(f'This might not be a ris file...')
+                self.exit_bib_manager()
+            field_title = line.split('-')[0].strip()
+            field_value = line.split('-')[1].strip()
+            if field_title=="ER":
+                self.print_info(f'end of {input_file_name}')
+                self.finalize_entry()
+                self.confirm_entry()
+                self.write_entry()
+            else:
+                if field_title=="TY":
+                    self.clear_fields()
+                self.make_ris_field(field_title,field_value)
+
+    def parse_bibtex(self, input_file_name):
         f1 = open(input_file_name,'r')
         lines = f1.read()
         while True:
@@ -201,22 +228,25 @@ python3 bib_manager.py 1                # to navigate database""")
             iaa = lines.find("@")
             if iaa<0:
                 self.print_warning(f'cannot find @!')
-                break
+                self.print_warning(f'check if the file is in .ris format')
+                self.parse_ris(input_file_name)
+                self.exit_bib_manager()
             ibr1 = lines.find("{")
             icomma = lines.find(",")
-            self.make_type(lines[iaa+1:ibr1])
+            self.make_field("bibtype",lines[iaa+1:ibr1])
             self.make_field("oldname",lines[ibr1+1:icomma])
             found_aa = False
             lines = lines[icomma+1:]
             while True:
-                lines, field_title, field_value = self.find_next_entry(lines)
+                lines, field_title, field_value = self.find_next_bibtex_entry(lines)
                 field_title = field_title.lower()
                 if field_title=="": break
                 if field_title=='"': continue
                 if field_title=="@":
                     found_aa = True
                     break
-                self.print_process(f"new-field : {field_title:15} > {field_value}")
+                #self.print_list(f"+field:", f"{field_title:15} > {field_value}")
+                self.print_debug(f"{field_title:15} > {field_value}")
                 if self.sendout_debug:
                     line_example = lines
                     if len(line_example)>19:
@@ -291,8 +321,7 @@ python3 bib_manager.py 1                # to navigate database""")
         while True:
             user_input = self.input_question(question)
             if user_input=="q":
-                self.print_info("QUIT!")
-                exit()
+                self.exit_bib_manager()
             if user_input:
                 if user_input.isdigit() and int(user_input)>=0 and int(user_input)<len(self.bib_fields):
                     key_name = list(self.bib_fields.keys())[int(user_input)]
@@ -349,7 +378,7 @@ python3 bib_manager.py 1                # to navigate database""")
                     self.bib_fields["volume"] = eprint.split(".")[0]
                     self.bib_fields["page1"] = eprint.split(".")[1]
                 self.bib_fields["volume"] = self.bib_fields["volume"].replace("-","")
-        #__ARXIV_________________________________________
+        #__NOT_ARXIV_____________________________________
             else:
                 self.make_journal("",True)
                 self.bib_fields["volume"] = ""
@@ -359,8 +388,14 @@ python3 bib_manager.py 1                # to navigate database""")
             self.make_journal("PhDThesis",True)
             self.bib_fields["volume"] = ""
             self.bib_fields["page1"] = ""
+        #__URL<DOI_______________________________________
+        if "doi" in self.bib_fields and "url" not in self.bib_fields:
+            url = self.bib_fields["doi"]
+            if url.find("https://doi.org/")<0:
+               url = "https://doi.org/" + url
+            self.make_field("url",url)
 
-    def find_next_entry(self, lines):
+    def find_next_bibtex_entry(self, lines):
         field_title = ""
         field_value = ""
         iaa = lines.find("@")
@@ -494,6 +529,8 @@ python3 bib_manager.py 1                # to navigate database""")
         self.bib_fields["institute"] = field_value
 
     def make_doi(self, field_value):
+        if field_value.find("https://doi.org/")>=0:
+           field_value =  field_value.replage("https://doi.org/","")
         self.bib_fields["doi"] = field_value
 
     def make_bibtag(self, field_value):
@@ -519,7 +556,7 @@ python3 bib_manager.py 1                # to navigate database""")
                 journal2 = ""
                 for token_journal2 in split_journal2:
                     journal2 = journal2 + token_journal2[0].upper()
-            self.self.print_warning(f'The journal "{field_value}" from {self.bib_fields["oldname"]} will be added temporarily: {journal1} / {journal2} / {journal3}')
+            self.print_warning(f'The journal "{field_value}" from {self.bib_fields["oldname"]} will be added temporarily: {journal1} / {journal2} / {journal3}')
             self.bib_fields["journal"] = [journal1,journal2,journal3]
         elif len(field_value)>0:
             found_etnry = False
@@ -530,7 +567,7 @@ python3 bib_manager.py 1                # to navigate database""")
                     break
             if found_etnry==False:
                 self.print_error(f'Add journal "{field_value}" to journal list!')
-                exit()
+                self.exit_bib_manager()
         else:
             self.print_warning(f'Journal is empty!')
             self.bib_fields["journal"] = ["","",""]
@@ -557,7 +594,7 @@ python3 bib_manager.py 1                # to navigate database""")
                     break
             if found_etnry==False:
                 self.print_error('Add collaboration "{field_value}" to collaboration list!')
-                exit()
+                self.exit_bib_manager()
         self.print_debug(f'collaboration : {self.bib_fields["collaboration"][0]}  /  {self.bib_fields["collaboration"][1]}  /  {self.bib_fields["collaboration"][2]}')
 
     def make_pages(self, field_value):
@@ -591,8 +628,27 @@ python3 bib_manager.py 1                # to navigate database""")
         else:
             self.print_warning(f'Add type "{type_name}" to type list!')
 
+    def configure_ris_field_title(self, field_title):
+        if field_title not in self.dictionary_of_ris_formats:
+            self.print_warning(f'The type "{field_title}" do not exist in ris format list!')
+            self.exit_bib_manager()
+        return self.dictionary_of_ris_formats[field_title]
+
+    def configure_ris_field_value(self, field_title, field_value):
+        if field_title=="TY" and field_value=="JOUR":
+            return "article"
+        return field_value
+
+    def make_ris_field(self, field_title, field_value):
+        field_value = self.configure_ris_field_value(field_title, field_value)
+        field_title = self.configure_ris_field_title(field_title)
+        #self.print_list(f"+field:", f"{field_title:15} > {field_value}")
+        self.print_debug(f"{field_title:15} > {field_value}")
+        self.make_field(field_title, field_value)
+        
     def make_field(self, field_title, field_value):
-        if   field_title=="author"        : self.make_author_list(field_value)
+        if   field_title=="bibtype"       : self.make_type(field_value)
+        elif field_title=="author"        : self.make_author_list(field_value)
         elif field_title=="journal"       : self.make_journal(field_value)
         elif field_title=="collaboration" : self.make_collaboration(field_value)
         elif field_title=="school"        : self.make_school(field_value)
@@ -644,8 +700,12 @@ python3 bib_manager.py 1                # to navigate database""")
         self.print_debug(names)
         return names
 
+
+
 if __name__ == "__main__":
     if len(sys.argv)>=2:
         bib_manager(sys.argv[1])
     else:
         bib_manager()
+
+
