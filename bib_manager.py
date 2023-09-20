@@ -5,27 +5,32 @@ import inspect
 
 class bib_manager:
 
-    def __init__(self, user_input=""):
+    def __init__(self, user_input1="", user_input2="", user_input3=""):
+        self.sendout_debug = False
         self.sendout_process = True
+        self.sendout_info = True
         self.sendout_warning = True
-        self.sendout_debug   = False
-        self.init()
-        input_number = -1
-        if user_input.isdigit() and len(user_input)==1:
-            input_number = int(user_input)
-            user_input = ""
-        if user_input:
-            if user_input.endswith(".ris"):
-                self.parse_ris(user_input)
-            elif user_input.endswith(".json"):
-                self.parse_json(user_input)
-            else:
-                self.parse_bibtex(user_input)
+        if self.sendout_process :
+            self.sendout_info = True
+        self.init_manager()
+        option1 = ""
+        if user_input1 in self.run_type_options:
+            option1 = user_input1
+            user_input1 = ""
+        if user_input1:
+            if   user_input1.endswith(".ris"):  self.parse_ris(user_input1)
+            elif user_input1.endswith(".json"): self.parse_json(user_input1)
+            else:                               self.parse_bibtex(user_input1)
         else:
-             self.run_manager(input_number)
+             self.run_manager(option1, user_input2, user_input3)
 
-    def init(self):
+    def init_manager(self):
         self.clear_fields()
+        self.run_type_options = {
+            "q":9,
+            "0":0, "new":0,
+            "1":1, "nav":1, "navigate":1,
+        }
         self.collaboration_list = []
         self.journal_list = []
         self.dictionary_of_ris_formats = {}
@@ -54,10 +59,10 @@ class bib_manager:
         if self.sendout_process or always_sendout:
             print(f'{content}')
 
-    def print_info   (self, content, always_sendout=False): print(f'\033[0;32m***\033[0m {content}')      if (self.sendout_process or always_sendout) else 0
+    def print_info   (self, content, always_sendout=False): print(f'\033[0;32m***\033[0m {content}')      if (self.sendout_info    or always_sendout) else 0
     def print_warning(self, content, always_sendout=False): print(f'\033[0;32mwarning!\033[0m {content}') if (self.sendout_warning or always_sendout) else 0
     def print_error  (self, content, always_sendout=False): print(f'\033[0;32merror!\033[0m {content}')   if (self.sendout_error   or always_sendout) else 0
-    def print_list   (self, tt, val, always_sendout=False): print(f'\033[0;34m{tt}\033[0m {val}')    if (self.sendout_process or always_sendout) else 0
+    def print_list   (self, tt, val, always_sendout=False): print(f'\033[0;34m{tt}\033[0m {val}')         if (self.sendout_info    or always_sendout) else 0
 
     def print_debug(self, content, always_sendout=False):
         callerframerecord = inspect.stack()[1]
@@ -72,8 +77,10 @@ class bib_manager:
         info = inspect.getframeinfo(frame)
         print(f"\033[0;36m+{info.lineno} {info.filename} \033[0;36m# ({info.function})\033[0m {content}")
 
+
+
     def print_all_fields(self):
-        self.print_info(f'Printing fields of {self.bib_fields["bibname"]}  ({self.bib_fields["oldname"]})')
+        self.print_info(f'Printing fields of {self.bib_fields["bname"]}  ({self.bib_fields["xname"]})')
         list_of_keys = []
         for key_name in self.bib_fields:
             self.print_field(key_name,len(list_of_keys))
@@ -109,10 +116,12 @@ class bib_manager:
                     else:
                         for field in line_required.split(","):
                             if field.find("/")>=0: field = field[:field.find("/")]
-                            self.required_fields[type_name].append(field.strip())
+                            field = field.lower().strip()
+                            self.required_fields[type_name].append(field)
                         for field in line_optional.split(","):
                             if field.find("/")>=0: field = field[:field.find("/")]
-                            self.optional_fields[type_name].append(field.strip())
+                            field = field.lower().strip()
+                            self.optional_fields[type_name].append(field)
                 type_name = ""
                 type_equal_to = ""
                 line_required = ""
@@ -169,36 +178,33 @@ class bib_manager:
                 if len(full_name)>0:
                     self.journal_list.append([full_name, minimum_name, short_name])
 
-    def run_manager(self, input_number=-1):
+    def run_manager(self, option1="", option2="", option3=""):
         self.print_info("Usage of Bibliography Manager")
-        options = ["0","1","q"]
         self.print_process("""python3 bib_manager.py bibtex_file.bib  # to write database for bibtex file "bibtex_file.bib" : 
 python3 bib_manager.py 0                # to write database from raw
 python3 bib_manager.py 1                # to navigate database""")
-        self.print_list(f"{'0)':>3}","Write database from raw")
-        self.print_list(f"{'1)':>3}","Navigate")
+        self.print_list(f"{'0)':>3}","Navigate")
+        self.print_list(f"{'1)':>3}","Write database from raw")
         self.print_list(f"{'q)':>3}","Quite")
         question = "Enter option from above: "
-        user_input = self.input_question(question)
-        if not user_input:
+        if not option1:
+            option1 = self.input_question(question)
+        if not option1:
             self.navigate_database()
-        if user_input in options:
-            if user_input=="q":
-                self.print_info("QUIT!")
-                self.exit_bib_manager()
-            if user_input=="0": self.write_database_from_raw()
-            if user_input=="1": self.navigate_database()
+        if option1 in self.run_type_options:
+            if self.run_type_options[option1]==9: self.exit_bib_manager()
+            if self.run_type_options[option1]==0: self.navigate_database(option2,option3)
+            if self.run_type_options[option1]==1: self.write_database_from_raw()
 
     def write_database_from_raw(self):
         pass
 
-    def navigate_database(self):
-        navigate_options = ["bibname", "bibnumber", "bibtype", "bibtag", "collaboration"]
-        for idx, option in enumerate(navigate_options):
-            self.print_list(f"{f'{idx})':>3}",option)
-        question = "Enter option from above: "
-        user_input = self.input_question(question)
-        #files_in_directory = os.listdir("data/json/")
+    def navigate_database(self, nav_option1="", nav_option2=""):
+        #navigate_options = ["bname", "bnumber", "btype", "btag", "collaboration"]
+        #for idx, option in enumerate(navigate_options):
+        #    self.print_list(f"{f'{idx})':>3}",option)
+        #question = "Enter option from above: "
+        #user_input = self.input_question(question)
         pass
 
     def parse_json(self, user_input):
@@ -228,6 +234,7 @@ python3 bib_manager.py 1                # to navigate database""")
             else:
                 if field_title=="TY":
                     self.clear_fields()
+                    self.make_field("btype","article")
                 self.make_ris_field(field_title,field_value)
 
     def parse_bibtex(self, input_file_name):
@@ -247,8 +254,8 @@ python3 bib_manager.py 1                # to navigate database""")
                 self.exit_bib_manager()
             ibr1 = lines.find("{")
             icomma = lines.find(",")
-            self.make_field("bibtype",lines[iaa+1:ibr1])
-            self.make_field("oldname",lines[ibr1+1:icomma])
+            self.make_field("btype",lines[iaa+1:ibr1])
+            self.make_field("xname",lines[ibr1+1:icomma])
             found_aa = False
             lines = lines[icomma+1:]
             while True:
@@ -275,10 +282,13 @@ python3 bib_manager.py 1                # to navigate database""")
                 break
 
     def write_entry(self):
-        if "bibname" in self.bib_fields:
-            file_name_json = f'data/json/{self.bib_fields["bibname"]}.json'
+        if "bname" in self.bib_fields:
+            file_name_json = f'data/json/{self.bib_fields["bname"]}.json'
             with open(file_name_json,'w') as file_json:
                 self.print_info(f'Writting {file_name_json}')
+                #https://docs.python.org/ko/3/library/json.html
+                #json.dump(obj, fp, *, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True,
+                #          cls=None, indent=None, separators=None, default=None, sort_keys=False, **kw)
                 json.dump(self.bib_fields,file_json)
                 file_json.close()
         if "numbering" in self.bib_fields:
@@ -292,27 +302,27 @@ python3 bib_manager.py 1                # to navigate database""")
                 except (ValueError, IndexError):
                     pass
             next_number = max_number + 1
-            file_name_numbering = f'data/numbering/{next_number}_{self.bib_fields["bibname"]}'
+            file_name_numbering = f'data/numbering/{next_number}_{self.bib_fields["bname"]}'
             with open(file_name_numbering,'w') as file_numbering:
-                self.print_info(f'Touch {file_name_numbering}')
+                self.print_info(f'Creating {file_name_numbering}')
                 pass
         if "collaboration" in self.bib_fields:
             directory_path = f'data/collaboration'
             if self.bib_fields["collaboration"]:
                 directory_path = directory_path + f'/{self.bib_fields["collaboration"][1]}'
                 os.makedirs(directory_path, exist_ok=True)
-                file_name_collaboration = f'{directory_path}/{self.bib_fields["bibname"]}'
+                file_name_collaboration = f'{directory_path}/{self.bib_fields["bname"]}'
                 with open(file_name_collaboration,'w') as file_collaboration:
-                    self.print_info(f'Touch {file_name_collaboration}')
+                    self.print_info(f'Creating {file_name_collaboration}')
                     pass
-        if "bibtag" in self.bib_fields:
-            for tag1 in self.bib_fields["bibtag"]:
+        if "btag" in self.bib_fields:
+            for tag1 in self.bib_fields["btag"]:
                 if not tag1: continue
                 directory_path = f'data/tag/{tag1}'
                 os.makedirs(directory_path, exist_ok=True)
-                file_name_tag1 = f'{directory_path}/{self.bib_fields["bibname"]}'
+                file_name_tag1 = f'{directory_path}/{self.bib_fields["bname"]}'
                 with open(file_name_tag1,'w') as file_tag1:
-                    self.print_info(f'Touch {file_name_tag1}')
+                    self.print_info(f'Creating {file_name_tag1}')
                     pass
         if "author" in self.bib_fields:
             author1 = self.bib_fields["author"][0]
@@ -320,11 +330,28 @@ python3 bib_manager.py 1                # to navigate database""")
                 author_nsname = self.make_nospace_author_name(author1)
                 directory_path = f'data/author/{author_nsname}'
                 os.makedirs(directory_path, exist_ok=True)
-                file_name_author = f'{directory_path}/{self.bib_fields["bibname"]}'
+                file_name_author = f'{directory_path}/{self.bib_fields["bname"]}'
                 with open(file_name_author,'w') as file_author:
-                    self.print_info(f'Touch {file_name_author}')
+                    self.print_info(f'Creating {file_name_author}')
                     pass
-
+        #if "journal" in self.bib_fields:
+        #    journal1 = self.bib_fields["journal"][1]
+        #    if journal1:
+        #        directory_path = f'data/author/{journal1}'
+        #        os.makedirs(directory_path, exist_ok=True)
+        #        file_name_journal = f'{directory_path}/{self.bib_fields["bname"]}'
+        #        with open(file_name_journal,'w') as file_journal:
+        #            self.print_info(f'Creating {file_name_journal}')
+        #            pass
+        #if "bnumber" in self.bib_fields:
+        #    bibnumber1 = self.bib_fields["bnumber"]
+        #    if journal1:
+        #        directory_path = f'data/author/{journal1}'
+        #        os.makedirs(directory_path, exist_ok=True)
+        #        file_name_journal = f'{directory_path}/{self.bib_fields["bname"]}'
+        #        with open(file_name_journal,'w') as file_journal:
+        #            self.print_info(f'Creating {file_name_journal}')
+        #            pass
 
     def confirm_entry(self):
         self.print_info("Confirm Entry")
@@ -356,11 +383,11 @@ python3 bib_manager.py 1                # to navigate database""")
     def finalize_entry(self):
         self.print_info(f"Finalize entry")
         bib_is_arxiv = False
-        if self.bib_fields["bibtype"]=="inproceedings":
+        if self.bib_fields["btype"]=="inproceedings":
             if "archiveprefix" in self.bib_fields:
                 bib_is_arxiv = True
         #__TECHINAL_REPORT_______________________________
-        if self.bib_fields["bibtype"]=="techreport":
+        if self.bib_fields["btype"]=="techreport":
             if "reportnumber" in self.bib_fields:
                 self.bib_fields["volume"] = self.bib_fields["reportnumber"].replace("-","")
             else:
@@ -372,7 +399,7 @@ python3 bib_manager.py 1                # to navigate database""")
                 self.make_journal("Techical Report")
             self.bib_fields["page1"] = ""
         #__MISC__________________________________________
-        elif self.bib_fields["bibtype"]=="misc" or bib_is_arxiv:
+        elif self.bib_fields["btype"]=="misc" or bib_is_arxiv:
             key_contain_arxiv = ("archiveprefix" in self.bib_fields)
             url_contain_arxiv = False
             if "url" in self.bib_fields:
@@ -397,7 +424,7 @@ python3 bib_manager.py 1                # to navigate database""")
                 self.bib_fields["volume"] = ""
                 self.bib_fields["page1"] = ""
         #__THESIS________________________________________
-        elif self.bib_fields["bibtype"]=="phdthesis":
+        elif self.bib_fields["btype"]=="phdthesis":
             self.make_journal("PhDThesis",True)
             self.bib_fields["volume"] = ""
             self.bib_fields["page1"] = ""
@@ -490,7 +517,7 @@ python3 bib_manager.py 1                # to navigate database""")
         year = self.bib_fields["year"]
         volm = self.bib_fields["volume"]
         page = self.bib_fields["page1"]
-        btag = self.bib_fields["bibtag"][0]
+        btag = self.bib_fields["btag"][0]
         if len(name)>0: name = name + "_"
         if len(colb)>0: colb = colb + "_"
         if len(jour)>0: jour = jour + "_"
@@ -500,7 +527,7 @@ python3 bib_manager.py 1                # to navigate database""")
         if len(btag)>0: btag = btag + "_"
         bib_name_new = name + colb + jour + year + volm + page + btag
         bib_name_new = bib_name_new[:-1].strip()
-        self.bib_fields["bibname"] = bib_name_new
+        self.bib_fields["bname"] = bib_name_new
         return bib_name_new
 
     def replace_special_charactors(self, name):
@@ -546,15 +573,31 @@ python3 bib_manager.py 1                # to navigate database""")
            field_value =  field_value.replage("https://doi.org/","")
         self.bib_fields["doi"] = field_value
 
-    def make_bibtag(self, field_value):
+    def make_month(self, field_value):
+        field_value.lower()
+        if field_value=="1"  or field_value.find("jan")==0 : field_value = "Jan"
+        if field_value=="2"  or field_value.find("feb")==0 : field_value = "Feb"
+        if field_value=="3"  or field_value.find("mar")==0 : field_value = "Mar"
+        if field_value=="4"  or field_value.find("apr")==0 : field_value = "Apr"
+        if field_value=="5"  or field_value.find("may")==0 : field_value = "May"
+        if field_value=="6"  or field_value.find("jun")==0 : field_value = "Jun"
+        if field_value=="7"  or field_value.find("jul")==0 : field_value = "Jul"
+        if field_value=="8"  or field_value.find("aug")==0 : field_value = "Aug"
+        if field_value=="9"  or field_value.find("sep")==0 : field_value = "Sep"
+        if field_value=="10" or field_value.find("oct")==0 : field_value = "Oct"
+        if field_value=="11" or field_value.find("nov")==0 : field_value = "Nov"
+        if field_value=="12" or field_value.find("dec")==0 : field_value = "Dec"
+        self.bib_fields["month"].append(field_value)
+
+    def make_btag(self, field_value):
         for tag1 in field_value.split(','):
             tag1 = tag1.strip()
             if not tag1:
                 continue
-            if self.bib_fields["bibtag"][0]=='':
-                self.bib_fields["bibtag"][0] = tag1
+            if self.bib_fields["btag"][0]=='':
+                self.bib_fields["btag"][0] = tag1
             else:
-                self.bib_fields["bibtag"].append(tag1)
+                self.bib_fields["btag"].append(tag1)
 
     def make_archivePrefix(self, field_value):
         self.make_journal("Arxiv")
@@ -569,7 +612,7 @@ python3 bib_manager.py 1                # to navigate database""")
                 journal2 = ""
                 for token_journal2 in split_journal2:
                     journal2 = journal2 + token_journal2[0].upper()
-            self.print_warning(f'The journal "{field_value}" from {self.bib_fields["oldname"]} will be added temporarily: {journal1} / {journal2} / {journal3}')
+            self.print_warning(f'The journal "{field_value}" from {self.bib_fields["xname"]} will be added temporarily: {journal1} / {journal2} / {journal3}')
             self.bib_fields["journal"] = [journal1,journal2,journal3]
         elif len(field_value)>0:
             found_etnry = False
@@ -595,7 +638,7 @@ python3 bib_manager.py 1                # to navigate database""")
         #        collaboration2 = ""
         #        for token_collaboration2 in split_collaboration2:
         #            collaboration2 = collaboration2 + token_collaboration2[0].upper()
-        #    print_info('The collaboration "{field_value}" from {self.bib_fields["oldname"]} will be added temporarily: {collaboration1} / {collaboration2} / {collaboration3}')
+        #    print_info('The collaboration "{field_value}" from {self.bib_fields["xname"]} will be added temporarily: {collaboration1} / {collaboration2} / {collaboration3}')
         #    self.bib_fields["collaboration"] = [collaboration1,collaboration2,collaboration3]
         #elif len(field_value)>0:
         if len(field_value)>0:
@@ -625,12 +668,12 @@ python3 bib_manager.py 1                # to navigate database""")
             self.bib_fields["page2"] = 0
         self.print_debug(f'pages : {self.bib_fields["page1"]} - {self.bib_fields["page2"]}')
 
-    def make_type(self, field_value):
+    def make_btype(self, field_value):
         type_name = field_value.lower()
-        self.bib_fields["bibname"] = ""
-        self.bib_fields["bibnumber"] = -1
-        self.bib_fields["bibtype"] = type_name
-        self.bib_fields["bibtag"] = [""]
+        self.bib_fields["bname"] = ""
+        self.bib_fields["bnumber"] = -1
+        self.bib_fields["btype"] = type_name
+        self.bib_fields["btag"] = [""]
         self.bib_fields["collaboration"] = ["","",""]
         #self.bib_fields["physics"] = []
         #self.bib_fields["reaction"] = [[]]
@@ -640,8 +683,8 @@ python3 bib_manager.py 1                # to navigate database""")
         #self.bib_fields["theory"] = []
         #self.bib_fields["observation"] = []
         #self.bib_fields["observable"] = []
-        #self.bib_fields["sim-tool"] = []
-        self.bib_fields["oldname"] = ""
+        #self.bib_fields["tool"] = []
+        self.bib_fields["xname"] = ""
         if type_name in self.required_fields:
             for field in self.required_fields[type_name]:
                 self.bib_fields[field] = ""
@@ -655,8 +698,8 @@ python3 bib_manager.py 1                # to navigate database""")
         return self.dictionary_of_ris_formats[field_title]
 
     def configure_ris_field_value(self, field_title, field_value):
-        if field_title=="TY" and field_value=="JOUR":
-            return "article"
+        #if field_title=="TY" and field_value=="JOUR":
+        #    return "article"
         return field_value
 
     def make_ris_field(self, field_title, field_value):
@@ -666,27 +709,28 @@ python3 bib_manager.py 1                # to navigate database""")
         self.make_field(field_title, field_value)
         
     def make_field(self, field_title, field_value):
-        if   field_title=="bibtype"       : self.make_type(field_value)
-        elif field_title=="author"        : self.make_author_list(field_value)
+        if   field_title=="doi"           : self.make_doi(field_value)
+        elif field_title=="btag"          : self.make_btag(field_value)
+        elif field_title=="month"         : self.make_month(field_value)
+        elif field_title=="btype"         : self.make_btype(field_value)
+        elif field_title=="pages"         : self.make_pages(field_value)
+        elif field_title=="author"        : self.make_author(field_value)
+        elif field_title=="school"        : self.make_school(field_value)
         elif field_title=="journal"       : self.make_journal(field_value)
         elif field_title=="collaboration" : self.make_collaboration(field_value)
-        elif field_title=="school"        : self.make_school(field_value)
-        elif field_title=="pages"         : self.make_pages(field_value)
-        elif field_title=="doi"           : self.make_doi(field_value)
-        elif field_title=="bibtag"        : self.make_bibtag(field_value)
         else:
             self.bib_fields[field_title] = field_value
 
-    def make_author_list(self, field_value):
+    def make_author(self, field_value):
         name_is_last_to_first = False
         author_names = field_value.split(" and ")
         author_list = []
-        self.bib_fields["author"] = author_list
         for author_name in author_names:
-            names = self.make_author(author_name)
+            names = self.parse_author_name(author_name)
             author_list.append(names)
+        self.bib_fields["author"] = author_list
 
-    def make_author(self, author_name):
+    def parse_author_name(self, author_name):
         author_name = author_name.strip()
         last_name = ""
         first_name = ""
@@ -722,8 +766,9 @@ python3 bib_manager.py 1                # to navigate database""")
 
 
 if __name__ == "__main__":
-    if len(sys.argv)>=2:
-        bib_manager(sys.argv[1])
+    if len(sys.argv)==2: bib_manager(sys.argv[1])
+    elif len(sys.argv)==3: bib_manager(sys.argv[1],sys.argv[2])
+    elif len(sys.argv)==4: bib_manager(sys.argv[1],sys.argv[2],sys.argv[3])
     else:
         bib_manager()
 
