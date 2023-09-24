@@ -14,23 +14,41 @@ class bib_manager:
             self.sendout_info = True
         self.init_manager()
         option1 = ""
-        if user_input1 in self.run_type_options:
+        if user_input1 in self.run_options:
             option1 = user_input1
             user_input1 = ""
         if user_input1:
-            if   user_input1.endswith(".ris"):  self.parse_ris(user_input1)
-            elif user_input1.endswith(".json"): self.parse_json(user_input1)
-            else:                               self.parse_bibtex(user_input1)
+            self.parse_input(user_input1)
         else:
-             self.run_manager(option1, user_input2, user_input3)
+            self.print_info("Usage of Bibliography Manager")
+            run_option_numbers = ([run_option[0] for run_option in self.run_options])
+            run_option_explain = ([run_option[1] for run_option in self.run_options])
+            run_option_function = ([run_option[2] for run_option in self.run_options])
+            for i in range(len(run_option_numbers)):
+                self.print_process(f"python3 bib_manager.py {run_option_numbers[i]:20} # {run_option_explain[i]}")
+            for i in range(len(run_option_numbers)):
+                if len(run_option_numbers[i])==1:
+                    self.print_list(f"{run_option_numbers[i]+')':>3}",run_option_explain[i].title())
+            question = "Enter option from above: "
+            if not option1:
+                option1 = self.input_question(question)
+            if run_option_function[1]:
+            #if not option1:
+            #    self.navigate_database()
+            #if option1 in self.run_options:
+            #    if self.run_options[option1]=="quit": self.exit_bib_manager()
+            #    if self.run_options[option1]=="new":  self.write_database_from_raw()
+            #    if self.run_options[option1]=="nav":  self.navigate_database(user_input2,user_input3)
 
     def init_manager(self):
         self.clear_fields()
-        self.run_type_options = {
-            "q":9,
-            "0":0, "new":0,
-            "1":1, "nav":1, "navigate":1,
-        }
+        self.run_options = [
+            ["0",      'navigate database',        self.exit_bib_manager,        "nav","navigate", ],
+            ["1",      'write database from raw',  self.write_database_from_raw, "new",            ],
+            ["2",      'write database for input', self.navigate_database        ],
+            ["f1.bib", 'write database for input', self.navigate_database        ],
+            ["9",      'quite',                    self.exit_bib_manager,        "quit"]
+        ]
         self.collaboration_list = []
         self.journal_list = []
         self.dictionary_of_ris_formats = {}
@@ -45,7 +63,7 @@ class bib_manager:
         self.bib_fields = {}
 
     def exit_bib_manager(self):
-        print_info(f"exit from {inspect.getframeinfo(inspect.stack()[1][0]).function})")
+        self.print_info(f"exit from ({inspect.getframeinfo(inspect.stack()[1][0]).function})")
         exit()
 
     def input_question(self, question):
@@ -60,8 +78,8 @@ class bib_manager:
             print(f'{content}')
 
     def print_info   (self, content, always_sendout=False): print(f'\033[0;32m***\033[0m {content}')      if (self.sendout_info    or always_sendout) else 0
-    def print_warning(self, content, always_sendout=False): print(f'\033[0;32mwarning!\033[0m {content}') if (self.sendout_warning or always_sendout) else 0
-    def print_error  (self, content, always_sendout=False): print(f'\033[0;32merror!\033[0m {content}')   if (self.sendout_error   or always_sendout) else 0
+    def print_warning(self, content, always_sendout=False): print(f'\033[0;33mwarning!\033[0m {content}') if (self.sendout_warning or always_sendout) else 0
+    def print_error  (self, content, always_sendout=False): print(f'\033[0;31merror!\033[0m {content}')   if (self.sendout_error   or always_sendout) else 0
     def print_list   (self, tt, val, always_sendout=False): print(f'\033[0;34m{tt}\033[0m {val}')         if (self.sendout_info    or always_sendout) else 0
 
     def print_debug(self, content, always_sendout=False):
@@ -178,34 +196,31 @@ class bib_manager:
                 if len(full_name)>0:
                     self.journal_list.append([full_name, minimum_name, short_name])
 
-    def run_manager(self, option1="", option2="", option3=""):
-        self.print_info("Usage of Bibliography Manager")
-        self.print_process("""python3 bib_manager.py bibtex_file.bib  # to write database for bibtex file "bibtex_file.bib" : 
-python3 bib_manager.py 0                # to write database from raw
-python3 bib_manager.py 1                # to navigate database""")
-        self.print_list(f"{'0)':>3}","Navigate")
-        self.print_list(f"{'1)':>3}","Write database from raw")
-        self.print_list(f"{'q)':>3}","Quite")
-        question = "Enter option from above: "
-        if not option1:
-            option1 = self.input_question(question)
-        if not option1:
-            self.navigate_database()
-        if option1 in self.run_type_options:
-            if self.run_type_options[option1]==9: self.exit_bib_manager()
-            if self.run_type_options[option1]==0: self.navigate_database(option2,option3)
-            if self.run_type_options[option1]==1: self.write_database_from_raw()
 
     def write_database_from_raw(self):
         pass
 
     def navigate_database(self, nav_option1="", nav_option2=""):
-        #navigate_options = ["bname", "bnumber", "btype", "btag", "collaboration"]
-        #for idx, option in enumerate(navigate_options):
-        #    self.print_list(f"{f'{idx})':>3}",option)
-        #question = "Enter option from above: "
-        #user_input = self.input_question(question)
-        pass
+        navigate_options = ["name", "number", "type", "tag", "collaboration"]
+        navigate_options = {
+            "name":0,
+            "number":1,
+            "type":2,
+            "tag":3,
+            "collaboration":4
+        }
+        for idx, option in enumerate(navigate_options):
+            self.print_list(f"{f'{idx})':>3}",option)
+        question = "Enter option from above: "
+        user_input = self.input_question(question)
+        if user_input=="name":
+            pass
+
+    def parse_input(self):
+        if   user_input1.endswith(".ris"):  self.parse_ris(user_input1)
+        elif user_input1.endswith(".json"): self.parse_json(user_input1)
+        else:                               self.parse_bibtex(user_input1)
+
 
     def parse_json(self, user_input):
         self.clear_fields()
