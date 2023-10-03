@@ -10,6 +10,7 @@ class bib_manager:
         self.sendout_process = True
         self.sendout_info = True
         self.sendout_warning = True
+        self.sendout_error = True
         if self.sendout_process :
             self.sendout_info = True
         self.init_manager()
@@ -32,7 +33,7 @@ class bib_manager:
             question = "Enter option from above: "
             if not option1:
                 option1 = self.input_question(question)
-            if run_option_function[1]:
+            #if run_option_function[1]:
             #if not option1:
             #    self.navigate_database()
             #if option1 in self.run_options:
@@ -216,7 +217,7 @@ class bib_manager:
         if user_input=="name":
             pass
 
-    def parse_input(self):
+    def parse_input(self,user_input1):
         if   user_input1.endswith(".ris"):  self.parse_ris(user_input1)
         elif user_input1.endswith(".json"): self.parse_json(user_input1)
         else:                               self.parse_bibtex(user_input1)
@@ -239,8 +240,10 @@ class bib_manager:
                 self.print_error(f'cannot find "-"!')
                 self.print_error(f'This might not be a ris file...')
                 self.exit_bib_manager()
-            field_title = line.split('-')[0].strip()
-            field_value = line.split('-')[1].strip()
+            #field_title = line.split('-')[0].strip()
+            #field_value = line.split('-')[1].strip()
+            field_title = line[:line.find('-')].strip()
+            field_value = line[line.find('-')+1:].strip()
             if field_title=="ER":
                 self.print_info(f'End of {input_file_name}')
                 self.finalize_entry()
@@ -323,7 +326,7 @@ class bib_manager:
                 pass
         if "collaboration" in self.bib_fields:
             directory_path = f'data/collaboration'
-            if self.bib_fields["collaboration"]:
+            if self.bib_fields["collaboration"][0]:
                 directory_path = directory_path + f'/{self.bib_fields["collaboration"][1]}'
                 os.makedirs(directory_path, exist_ok=True)
                 file_name_collaboration = f'{directory_path}/{self.bib_fields["bname"]}'
@@ -387,13 +390,14 @@ class bib_manager:
                         self.make_field(key_name,user_value)
                         self.print_field(key_name)
                     else:
-                        break
+                        continue
                 else:
                     self.print_warning("out of index!")
                     #break
             else:
                 break
         self.make_bib_name()
+        self.print_all_fields()
 
     def finalize_entry(self):
         self.print_info(f"Finalize entry")
@@ -585,11 +589,11 @@ class bib_manager:
 
     def make_doi(self, field_value):
         if field_value.find("https://doi.org/")>=0:
-           field_value =  field_value.replage("https://doi.org/","")
+           field_value =  field_value.replace("https://doi.org/","")
         self.bib_fields["doi"] = field_value
 
     def make_month(self, field_value):
-        field_value.lower()
+        field_value = field_value.lower()
         if field_value=="1"  or field_value.find("jan")==0 : field_value = "Jan"
         if field_value=="2"  or field_value.find("feb")==0 : field_value = "Feb"
         if field_value=="3"  or field_value.find("mar")==0 : field_value = "Mar"
@@ -602,7 +606,7 @@ class bib_manager:
         if field_value=="10" or field_value.find("oct")==0 : field_value = "Oct"
         if field_value=="11" or field_value.find("nov")==0 : field_value = "Nov"
         if field_value=="12" or field_value.find("dec")==0 : field_value = "Dec"
-        self.bib_fields["month"].append(field_value)
+        self.bib_fields["month"] = field_value
 
     def make_btag(self, field_value):
         for tag1 in field_value.split(','):
@@ -637,7 +641,7 @@ class bib_manager:
                     found_etnry = True
                     break
             if found_etnry==False:
-                self.print_error(f'Add journal "{field_value}" to journal list!')
+                self.print_error(f'Add journal "{field_value}" to journal list data/common/list_of_journals !')
                 self.exit_bib_manager()
         else:
             self.print_warning(f'Journal is empty!')
@@ -689,9 +693,10 @@ class bib_manager:
         self.bib_fields["bnumber"] = -1
         self.bib_fields["btype"] = type_name
         self.bib_fields["btag"] = [""]
+        self.bib_fields["author"] = []
         self.bib_fields["collaboration"] = ["","",""]
         #self.bib_fields["physics"] = []
-        #self.bib_fields["reaction"] = [[]]
+        self.bib_fields["reaction"] = []
         #self.bib_fields["beam-energy"] = [[]]
         #self.bib_fields["detector"] = [[]]
         #self.bib_fields["experiment"] = []
@@ -702,9 +707,16 @@ class bib_manager:
         self.bib_fields["xname"] = ""
         if type_name in self.required_fields:
             for field in self.required_fields[type_name]:
-                self.bib_fields[field] = ""
+                if field not in self.bib_fields:
+                    self.bib_fields[field] = ""
         else:
             self.print_warning(f'Add type "{type_name}" to type list!')
+
+    def make_reaction(self, field_value):
+        reaction_array = field_value.split()
+        self.bib_fields["reaction"].append(reaction_array)
+        reaction_string = '_'.join(reaction_array)
+        self.make_btag(reaction_string)
 
     def configure_ris_field_title(self, field_title):
         if field_title not in self.dictionary_of_ris_formats:
@@ -728,6 +740,7 @@ class bib_manager:
         elif field_title=="btag"          : self.make_btag(field_value)
         elif field_title=="month"         : self.make_month(field_value)
         elif field_title=="btype"         : self.make_btype(field_value)
+        elif field_title=="reaction"      : self.make_reaction(field_value)
         elif field_title=="pages"         : self.make_pages(field_value)
         elif field_title=="author"        : self.make_author(field_value)
         elif field_title=="school"        : self.make_school(field_value)
@@ -739,10 +752,11 @@ class bib_manager:
     def make_author(self, field_value):
         name_is_last_to_first = False
         author_names = field_value.split(" and ")
-        author_list = []
+        author_list = self.bib_fields["author"]
         for author_name in author_names:
             names = self.parse_author_name(author_name)
             author_list.append(names)
+        #self.print_always(names)
         self.bib_fields["author"] = author_list
 
     def parse_author_name(self, author_name):
@@ -770,10 +784,16 @@ class bib_manager:
                 name2 = name[:idot+1].strip()
                 name  = name[idot+1:].strip()
                 if name2:
+                    if name2.find("{")==0 and name2.find("}")==len(name2)-1:
+                        name2 = name2[1:-1]
                     names.append(name2)
                 idot = name.find(".")
             else:
-                 names.append(name)
+                if name.find("{")==0 and name.find("}")==len(name)-1:
+                    name = name[1:-1]
+                names.append(name)
+        if last_name.find("{")==0 and last_name.find("}")==len(last_name)-1:
+            last_name = last_name[1:-1]
         names.append(last_name)
         self.print_debug(names)
         return names
@@ -781,10 +801,8 @@ class bib_manager:
 
 
 if __name__ == "__main__":
-    if len(sys.argv)==2: bib_manager(sys.argv[1])
+    if   len(sys.argv)==2: bib_manager(sys.argv[1])
     elif len(sys.argv)==3: bib_manager(sys.argv[1],sys.argv[2])
     elif len(sys.argv)==4: bib_manager(sys.argv[1],sys.argv[2],sys.argv[3])
     else:
         bib_manager()
-
-
