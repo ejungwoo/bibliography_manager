@@ -29,7 +29,7 @@ class bib_manager:
                 self.print_process(f"python3 bib_manager.py {run_option_numbers[i]:20} # {run_option_explain[i]}")
             for i in range(len(run_option_numbers)):
                 if len(run_option_numbers[i])==1:
-                    self.print_list(f"{run_option_numbers[i]+')':>3}",run_option_explain[i].title())
+                    self.print_list(f"{run_option_numbers[i]+')':>3}",run_option_explain[i])
             question = "Enter option from above: "
             if not option1:
                 option1 = self.input_question(question)
@@ -44,11 +44,11 @@ class bib_manager:
     def init_manager(self):
         self.clear_fields()
         self.run_options = [
-            ["0",      'navigate database',        self.exit_bib_manager,        "nav","navigate", ],
-            ["1",      'write database from raw',  self.write_database_from_raw, "new",            ],
-            ["2",      'write database for input', self.navigate_database        ],
-            ["f1.bib", 'write database for input', self.navigate_database        ],
-            ["9",      'quite',                    self.exit_bib_manager,        "quit"]
+            ["0",      'navigate database',         self.exit_bib_manager,        "nav","navigate", ],
+            ["1",      'write database from raw',   self.write_database_from_raw, "new",            ],
+            ["2",      'write database from input', self.navigate_database        ],
+            ["f1.bib", 'write database from input', self.navigate_database        ],
+            ["9",      'quite',                     self.exit_bib_manager,        "quit"]
         ]
         self.collaboration_list = []
         self.journal_list = []
@@ -121,50 +121,20 @@ class bib_manager:
         while True:
             line = f1.readline()
             if not line: break
-            line = line.strip()
-            if len(line)==0:
-                new_type = True
-                if len(type_name)>0:
-                    line_required = line_required.strip()
-                    line_optional = line_optional.strip()
-                    self.required_fields[type_name] = []
-                    self.optional_fields[type_name] = []
-                    if len(type_equal_to)>0:
-                         self.required_fields[type_name] = self.required_fields[type_equal_to] 
-                         self.optional_fields[type_name] = self.optional_fields[type_equal_to] 
-                    else:
-                        for field in line_required.split(","):
-                            if field.find("/")>=0: field = field[:field.find("/")]
-                            field = field.lower().strip()
-                            self.required_fields[type_name].append(field)
-                        for field in line_optional.split(","):
-                            if field.find("/")>=0: field = field[:field.find("/")]
-                            field = field.lower().strip()
-                            self.optional_fields[type_name].append(field)
-                type_name = ""
-                type_equal_to = ""
-                line_required = ""
-                line_optional = ""
-                following_is_required_fields = False
-                following_is_optional_fields = False
-                continue
-            elif new_type:
-                type_name = line
-                new_type = False
-                continue
-            elif line[0]=='*':
-                type_equal_to = line[1:]
-                continue
-            elif line[:16]=="Required fields:":
-                following_is_required_fields = True
-                following_is_optional_fields = False
-                line = line[16:]
-            elif line[:16]=="Optional fields:":
-                following_is_optional_fields = True
-                following_is_required_fields = False
-                line = line[16:]
-            if following_is_required_fields: line_required = line_required + line
-            if following_is_optional_fields: line_optional = line_optional + line
+            if len(line)==0: continue
+            header, content = line[0], line[1:].strip()
+            if header=="*":
+                type_name = content
+                self.required_fields[type_name] = []
+                self.optional_fields[type_name] = []
+            if header=="1":
+                self.required_fields[type_name].append(content)
+            if header=="9":
+                self.optional_fields[type_name].append(content)
+            if header=="*":
+                type_equal_to = content
+                self.required_fields[type_name] = self.required_fields[type_equal_to]
+                self.optional_fields[type_name] = self.optional_fields[type_equal_to]
 
     def read_list_of_collaborations(self):
         with open('data/common/list_of_collaborations','r') as f1:
