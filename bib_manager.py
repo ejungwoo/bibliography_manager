@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 import json
@@ -6,6 +8,7 @@ import inspect
 class bib_manager:
 
     def __init__(self, user_input1="", user_input2="", user_input3=""):
+        #self.print_debug(f"{user_input1} {user_input2} {user_input3}")
         self.sendout_debug = False
         self.sendout_process = True
         self.sendout_info = True
@@ -22,33 +25,35 @@ class bib_manager:
             self.parse_input(user_input1)
         else:
             self.print_info("Usage of Bibliography Manager")
-            run_option_numbers = ([run_option[0] for run_option in self.run_options])
-            run_option_explain = ([run_option[1] for run_option in self.run_options])
+            run_option_numbers =  ([run_option[0] for run_option in self.run_options])
+            run_option_explain =  ([run_option[1] for run_option in self.run_options])
             run_option_function = ([run_option[2] for run_option in self.run_options])
             for i in range(len(run_option_numbers)):
-                self.print_process(f"python3 bib_manager.py {run_option_numbers[i]:20} # {run_option_explain[i]}")
+                self.print_title(f"python3 bib_manager.py {run_option_numbers[i]:20} # {run_option_explain[i]}")
             for i in range(len(run_option_numbers)):
                 if len(run_option_numbers[i])==1:
                     self.print_list(f"{run_option_numbers[i]+')':>3}",run_option_explain[i])
             question = "Enter option from above: "
             if not option1:
                 option1 = self.input_question(question)
-            #if run_option_function[1]:
-            #if not option1:
-            #    self.navigate_database()
-            #if option1 in self.run_options:
-            #    if self.run_options[option1]=="quit": self.exit_bib_manager()
-            #    if self.run_options[option1]=="new":  self.write_database_from_raw()
-            #    if self.run_options[option1]=="nav":  self.navigate_database(user_input2,user_input3)
+                if option1:
+                    self.print_info(f"You selected {option1}")
+            if not option1:
+                self.navigate_database()
+            for run_option_entry in self.run_options :
+                if option1 in run_option_entry:
+                    run_option_entry[2]()
+            #if self.run_options[option1]=="quit": self.exit_bib_manager()
+            #if self.run_options[option1]=="new":  self.write_database_from_raw()
+            #if self.run_options[option1]=="nav":  self.navigate_database(user_input2,user_input3)
 
     def init_manager(self):
         self.clear_fields()
         self.run_options = [
-            ["0",      'navigate database',         self.exit_bib_manager,        "nav","navigate", ],
-            ["1",      'write database from raw',   self.write_database_from_raw, "new",            ],
-            ["2",      'write database from input', self.navigate_database        ],
-            ["f1.bib", 'write database from input', self.navigate_database        ],
-            ["9",      'quite',                     self.exit_bib_manager,        "quit"]
+            ["0", 'navigate database',         self.navigate_database,       "nav", "navigate"],
+            ["1", 'write database from raw',   self.write_database_from_raw, "new"],
+            ["2", 'write database from input', self.parse_input,             "input"],
+            ["9", 'quite',                     self.exit_bib_manager,        "quit"]
         ]
         self.collaboration_list = []
         self.journal_list = []
@@ -71,7 +76,27 @@ class bib_manager:
         user_input = input(f"\033[0;36m=== {question}\033[0m").strip()
         return user_input
 
-    def print_process(self, content, always_sendout=False, make_block=False):
+    def input_options(self, options, question="Type option number(s) to Add. Type <Enter> if non: "):
+        list(options)
+        idx_option = {}
+        for idx, key in enumerate(list(options)):
+            if idx+1<10:
+                idxalp = str(idx+1)
+            else:
+                idxalp = chr((idx-10) + 97)
+            self.print_list(f"{idxalp:3>})",key)
+            idx_option[idxalp] = key
+        user_options = input(question)
+        self.print_info("Selected option(s):")
+        list_chosen_key = []
+        if len(user_options)!=0:
+            for idxalp in user_options:
+                key = idx_option[idxalp]
+                list_chosen_key.append(key)
+                self.print_list(f"{idxalp:3>})",key)
+        return list_chosen_key
+
+    def print_title(self, content, always_sendout=False, make_block=False):
         if make_block:
             line_break = "____________________________________________________________________________________"
             content = f"{line_break}\n{content.strip()}\n{line_break}"
@@ -95,8 +120,6 @@ class bib_manager:
         frame = callerframerecord[0]
         info = inspect.getframeinfo(frame)
         print(f"\033[0;36m+{info.lineno} {info.filename} \033[0;36m# ({info.function})\033[0m {content}")
-
-
 
     def print_all_fields(self):
         self.print_info(f'Printing fields of {self.bib_fields["bname"]}  ({self.bib_fields["xname"]})')
@@ -180,18 +203,31 @@ class bib_manager:
             "tag":3,
             "collaboration":4
         }
-        for idx, option in enumerate(navigate_options):
-            self.print_list(f"{f'{idx})':>3}",option)
-        question = "Enter option from above: "
-        user_input = self.input_question(question)
-        if user_input=="name":
-            pass
+        input_option = self.input_options(navigate_options)[0]
+        print(input_option)
+        self.navigate_author()
+            #data/author
+        #for idx, option in enumerate(navigate_options):
+        #    self.print_list(f"{f'{idx})':>3}",option)
+        #question = "Enter option from above: "
+        #user_input = self.input_question(question)
+        #if user_input=="name":
+        #    pass
 
-    def parse_input(self,user_input1):
+    def navigate_author():
+        list_of_files = os.listdir("data/author")
+        print(list_of_files)
+
+    def parse_input(self,user_input1=""):
+        if not user_input1:
+            list_of_files = os.listdir("./")
+            user_input_array = self.input_options(list_of_files)
+            if len(user_input_array)==0:
+                self.exit_bib_manager()
+            user_input1 = user_input_array[0]
         if   user_input1.endswith(".ris"):  self.parse_ris(user_input1)
         elif user_input1.endswith(".json"): self.parse_json(user_input1)
         else:                               self.parse_bibtex(user_input1)
-
 
     def parse_json(self, user_input):
         self.clear_fields()
@@ -232,7 +268,7 @@ class bib_manager:
             if len(lines)==0:
                 self.print_warning(f'content is empty!')
                 break
-            self.print_process(lines, make_block=True)
+            self.print_title(lines, make_block=True)
             self.clear_fields()
             iaa = lines.find("@")
             if iaa<0:
@@ -259,7 +295,7 @@ class bib_manager:
                     line_example = lines
                     if len(line_example)>19:
                         line_example = lines[:20].strip() + " ..."
-                    self.print_process(f"    -->   {line_example}")
+                    self.print_title(f"    -->   {line_example}")
                 self.make_field(field_title, field_value)
             self.print_info(f'End of {input_file_name}')
             self.finalize_entry()
