@@ -14,38 +14,24 @@ class bib_manager:
         self.sendout_info = True
         self.sendout_warning = True
         self.sendout_error = True
-        if self.sendout_process :
-            self.sendout_info = True
+        if self.sendout_process : self.sendout_info = True
         self.init_manager()
-        option1 = ""
-        if user_input1 in self.run_options:
-            option1 = user_input1
-            user_input1 = ""
-        if user_input1:
+        run_option_numbers = ([run_option[0] for run_option in self.run_options])
+        run_option_explain = ([run_option[1] for run_option in self.run_options])
+        run_option_function = ([run_option[2] for run_option in self.run_options])
+        if user_input1 and user_input1 not in run_option_numbers:
             self.parse_input(user_input1)
+        if user_input1 and user_input1 in run_option_numbers:
+            run_option_index = run_option_numbers.index(user_input1)
+            self.print_always(self.run_options[run_option_index][2])
+            self.run_options[run_option_index][2]()
         else:
             self.print_info("Usage of Bibliography Manager")
-            run_option_numbers =  ([run_option[0] for run_option in self.run_options])
-            run_option_explain =  ([run_option[1] for run_option in self.run_options])
-            run_option_function = ([run_option[2] for run_option in self.run_options])
-            for i in range(len(run_option_numbers)):
-                self.print_title(f"python3 bib_manager.py {run_option_numbers[i]:20} # {run_option_explain[i]}")
-            for i in range(len(run_option_numbers)):
-                if len(run_option_numbers[i])==1:
-                    self.print_list(f"{run_option_numbers[i]+')':>3}",run_option_explain[i])
-            question = "Enter option from above: "
-            if not option1:
-                option1 = self.input_question(question)
-                if option1:
-                    self.print_info(f"You selected {option1}")
-            if not option1:
-                self.navigate_database()
-            for run_option_entry in self.run_options :
-                if option1 in run_option_entry:
-                    run_option_entry[2]()
-            #if self.run_options[option1]=="quit": self.exit_bib_manager()
-            #if self.run_options[option1]=="new":  self.write_database_from_raw()
-            #if self.run_options[option1]=="nav":  self.navigate_database(user_input2,user_input3)
+            for idx in range(len(run_option_numbers)):
+                self.print_process(f"python3 bib_manager.py {run_option_numbers[idx]:20} # {run_option_explain[idx]}")
+            user_input_idx, user_input_value = self.enumerate_and_select_from_list(run_option_explain)
+            if user_input_value:
+                self.run_options[user_input_idx][2]()
 
     def init_manager(self):
         self.clear_fields()
@@ -115,7 +101,7 @@ class bib_manager:
         if self.sendout_debug or always_sendout:
             print(f"\033[0;36m+{info.lineno} {info.filename} \033[0;36m# ({info.function})\033[0m {content}")
 
-    def print_always(self, content, always_sendout=False):
+    def print_always(self, content="", always_sendout=False):
         callerframerecord = inspect.stack()[1]
         frame = callerframerecord[0]
         info = inspect.getframeinfo(frame)
@@ -146,14 +132,24 @@ class bib_manager:
             if not line: break
             if len(line)==0: continue
             header, content = line[0], line[1:].strip()
+            if header=="#":
+                continue
             if header=="*":
                 type_name = content
                 self.required_fields[type_name] = []
                 self.optional_fields[type_name] = []
+                #if "bname"         not in self.required_fields: self.optional_fields[type_name].append("bname")
+                #if "bnumber"       not in self.required_fields: self.optional_fields[type_name].append("bnumber")
+                #if "btype"         not in self.required_fields: self.optional_fields[type_name].append("btype")
+                #if "btag"          not in self.required_fields: self.optional_fields[type_name].append("btag")
+                if "collaboration" not in self.required_fields: self.optional_fields[type_name].append("collaboration")
+                if "reference"     not in self.required_fields: self.optional_fields[type_name].append("reference")
+                if "citedby"       not in self.required_fields: self.optional_fields[type_name].append("citedby")
+                if "reaction"      not in self.required_fields: self.optional_fields[type_name].append("reaction")
             if header=="1":
-                self.required_fields[type_name].append(content)
+                if content not in self.required_fields: self.required_fields[type_name].append(content)
             if header=="9":
-                self.optional_fields[type_name].append(content)
+                if content not in self.required_fields: self.optional_fields[type_name].append(content)
             if header=="*":
                 type_equal_to = content
                 self.required_fields[type_name] = self.required_fields[type_equal_to]
@@ -190,11 +186,74 @@ class bib_manager:
                 if len(full_name)>0:
                     self.journal_list.append([full_name, minimum_name, short_name])
 
+    def enumerate_and_select_from_list(self, options):
+        idxMax = 0
+        for idx, option in enumerate(options):
+            self.print_list(f"{f'{idx})':>3}",option)
+            idxMax = idx
+        question = "Enter index/name from above: "
+        user_input = self.input_question(question)
+        idxSelect = -1
+        if user_input in options:
+            idxSelect = options.index(user_input)
+        if idxSelect<0 and user_input.isdigit() and int(user_input)<=idxMax:
+            idxSelect = int(user_input)
+        if idxSelect>0:
+            keySelect = options[idxSelect]
+            return idxSelect, keySelect
+        return -1, ""
+
+    def enumerate_and_select_from_dict(self, options):
+        idxMax = 0
+        for idx, option in enumerate(options):
+            self.print_list(f"{f'{idx})':>3}",option)
+            idxMax = idx
+        question = "Enter index/name from above: "
+        user_input = self.input_question(question)
+        idxSelect = -1
+        if user_input in options:
+            idxSelect = list(options.keys()).index(user_input)
+        if idxSelect<0 and user_input.isdigit() and int(user_input)<=idxMax:
+            idxSelect = int(user_input)
+        if idxSelect>0:
+            keySelect = list(options.keys())[idxSelect]
+            return idxSelect, keySelect
+        return -1, ""
 
     def write_database_from_raw(self):
+        self.print_info("Write database from raw")
+        key_idx, key_selected = self.enumerate_and_select_from_dict(self.required_fields)
+        self.make_field("btype", key_selected)
+        self.finalize_entry()
+        #self.confirm_entry()
+        #self.write_entry()
+        #if key_selected:
+        #    self.print_info(key_selected)
+        #    required_fields = self.required_fields[key_selected]
+        #    required_fields = self.optional_fields[key_selected]
+        #    self.print_info(required_fields)
+        #    for field in required_fields:
+        #        user_input = ""
+        #        while len(user_input)==0:
+        #            user_input = self.input_question(f"Enter content for {field}: ")
+        #            if user_input=="x":
+        #                self.exit_bib_manager()
+        #        self.make_field("btype","article")
+        #    #self.print_info(self.required_fields[key_selected])
+        #    #self.print_info(self.optional_fields[key_selected])
+        #pass
+
+    def add_reference(self):
+        self.print_always()
+        pass
+
+    def add_citedby(self):
+        self.print_always()
         pass
 
     def navigate_database(self, nav_option1="", nav_option2=""):
+        self.print_info("Navigate database")
+        self.print_always()
         navigate_options = ["name", "number", "type", "tag", "collaboration"]
         navigate_options = {
             "name":0,
@@ -701,8 +760,10 @@ class bib_manager:
         self.bib_fields["btag"] = [""]
         self.bib_fields["author"] = []
         self.bib_fields["collaboration"] = ["","",""]
-        #self.bib_fields["physics"] = []
+        self.bib_fields["reference"] = {}
+        self.bib_fields["citedby"] = {}
         self.bib_fields["reaction"] = []
+        #self.bib_fields["physics"] = []
         #self.bib_fields["beam-energy"] = [[]]
         #self.bib_fields["detector"] = [[]]
         #self.bib_fields["experiment"] = []
@@ -803,7 +864,6 @@ class bib_manager:
         names.append(last_name)
         self.print_debug(names)
         return names
-
 
 
 if __name__ == "__main__":
