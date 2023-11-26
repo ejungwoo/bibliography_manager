@@ -1,0 +1,8 @@
+@misc{dhibar2018study,
+      title={Study of 12C(p,p',gamma)12C reaction},
+      author={M. Dhibar and I. Mazumdar and G. Anil Kumar and S. P. Weppner and A. K. Rhine Kumar and S. M. Patel and P. B. Chavan},
+      year={2018},
+      eprint={1806.02126},
+      archivePrefix={arXiv},
+      primaryClass={nucl-ex}
+}

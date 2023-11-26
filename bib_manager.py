@@ -20,15 +20,18 @@ class bib_manager:
         run_option_explain = ([run_option[1] for run_option in self.run_options])
         run_option_function = ([run_option[2] for run_option in self.run_options])
         if user_input1 and user_input1 not in run_option_numbers:
-            self.parse_input(user_input1)
-        if user_input1 and user_input1 in run_option_numbers:
+            if user_input1.find('.')>0:
+                self.parse_input(user_input1)
+            else:
+                self.navigate_title(user_input1)
+        elif user_input1 and user_input1 in run_option_numbers:
             run_option_index = run_option_numbers.index(user_input1)
             self.print_always(self.run_options[run_option_index][2])
             self.run_options[run_option_index][2]()
         else:
             self.print_info("Usage of Bibliography Manager")
             for idx in range(len(run_option_numbers)):
-                self.print_process(f"python3 bib_manager.py {run_option_numbers[idx]:20} # {run_option_explain[idx]}")
+                self.print_title(f"python3 bib_manager.py {run_option_numbers[idx]:20} # {run_option_explain[idx]}")
             user_input_idx, user_input_value = self.enumerate_and_select_from_list(run_option_explain)
             if user_input_value:
                 self.run_options[user_input_idx][2]()
@@ -262,9 +265,9 @@ class bib_manager:
             "tag":3,
             "collaboration":4
         }
-        input_option = self.input_options(navigate_options)[0]
-        print(input_option)
-        self.navigate_author()
+        #input_option = self.input_options(navigate_options)[0]
+        #print(input_option)
+        #self.navigate_author()
             #data/author
         #for idx, option in enumerate(navigate_options):
         #    self.print_list(f"{f'{idx})':>3}",option)
@@ -273,9 +276,17 @@ class bib_manager:
         #if user_input=="name":
         #    pass
 
-    def navigate_author():
+    def navigate_author(self):
         list_of_files = os.listdir("data/author")
         print(list_of_files)
+
+    def navigate_title(self,user_input):
+        list_of_files = os.listdir("data/json")
+        for file_name in list_of_files:
+            if file_name.find(user_input)>=0:
+                self.parse_json(f"data/json/{file_name}")
+                return
+        self.print_warning(f"No matching {user_input}")
 
     def parse_input(self,user_input1=""):
         if not user_input1:
@@ -410,7 +421,7 @@ class bib_manager:
         if "author" in self.bib_fields:
             author1 = self.bib_fields["author"][0]
             if author1:
-                author_nsname = self.make_nospace_author_name(author1)
+                author_nsname = self.make_author_name_flat(author1)
                 directory_path = f'data/author/{author_nsname}'
                 os.makedirs(directory_path, exist_ok=True)
                 file_name_author = f'{directory_path}/{self.bib_fields["bname"]}'
@@ -462,6 +473,7 @@ class bib_manager:
             else:
                 break
         self.make_bib_name()
+        self.make_bib_cite()
         self.print_all_fields()
 
     def finalize_entry(self):
@@ -595,7 +607,7 @@ class bib_manager:
 
     def make_bib_name(self):
         self.print_debug(self.bib_fields["author"])
-        name = self.make_nospace_author_name(self.bib_fields["author"][0])
+        name = self.make_author_name_flat(self.bib_fields["author"][0])
         colb = self.bib_fields["collaboration"][1]
         jour = self.bib_fields["journal"][1]
         year = self.bib_fields["year"]
@@ -613,6 +625,27 @@ class bib_manager:
         bib_name_new = bib_name_new[:-1].strip()
         self.bib_fields["bname"] = bib_name_new
         return bib_name_new
+
+    def make_bib_cite(self):
+        self.print_debug(self.bib_fields["author"])
+        name = self.make_author_name_cite(self.bib_fields["author"][0])
+        jour = self.bib_fields["journal"][2]
+        volm = self.bib_fields["volume"]
+        year = self.bib_fields["year"]
+        page = self.bib_fields["page1"]
+        if len(name)>0:
+            if len(self.bib_fields["author"])>1:
+                name = name + " et. al., "
+            else:
+                name = name + ", "
+        if len(jour)>0: jour = jour + " "
+        if len(volm)>0: volm = volm + " "
+        if len(year)>0: year = f"({year}) "
+        if len(page)>0: page = page
+        bib_cite_new = name + jour + volm + year + page
+        bib_cite_new = bib_cite_new.strip()
+        self.bib_fields["bcite"] = bib_cite_new
+        return bib_cite_new
 
     def replace_special_charactors(self, name):
         name = name.strip()
@@ -635,7 +668,7 @@ class bib_manager:
         name = name.replace(" ","")
         return name
 
-    def make_nospace_author_name(self, author):
+    def make_author_name_flat(self, author):
         first_name = self.replace_special_charactors(author[0]).title()
         last_name = self.replace_special_charactors(author[-1]).title()
         middle_name = ""
@@ -645,6 +678,12 @@ class bib_manager:
             for author0 in author[1:-1]:
                 middle_name = middle_name + self.replace_special_charactors(author0).title()
         full_name = last_name + first_name + middle_name
+        return full_name
+
+    def make_author_name_cite(self, author):
+        first_name = (author[0]).title()
+        last_name = (author[-1]).title()
+        full_name = f"{first_name.title()} {last_name.title()}"
         return full_name
 
     def make_school(self, field_value):
@@ -818,7 +857,11 @@ class bib_manager:
 
     def make_author(self, field_value):
         name_is_last_to_first = False
-        author_names = field_value.split(" and ")
+        if field_value.count(",")>1 and field_value.count("and")==1:
+            field_value = field_value.replace(" and ",", ")
+            author_names = field_value.split(",")
+        else:
+            author_names = field_value.split(" and ")
         author_list = self.bib_fields["author"]
         for author_name in author_names:
             names = self.parse_author_name(author_name)
