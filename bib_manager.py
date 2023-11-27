@@ -121,6 +121,10 @@ class bib_manager:
         if idx>=0: self.print_list(f"{str(idx)+')':>3}", f"{key:20}{self.bib_fields[key]}")
         else:      self.print_list(f"{'>':>3}",  f"{key:20}{self.bib_fields[key]}")
 
+    def print_cite(self):
+        self.print_info("Cite as:")
+        print(self.bib_fields["bcite"])
+
     def read_list_of_entry_types(self):
         f1 = open('data/common/list_of_entry_types','r')
         new_type = True
@@ -282,11 +286,17 @@ class bib_manager:
 
     def navigate_title(self,user_input):
         list_of_files = os.listdir("data/json")
+        list_of_found = []
         for file_name in list_of_files:
             if file_name.find(user_input)>=0:
-                self.parse_json(f"data/json/{file_name}")
-                return
-        self.print_warning(f"No matching {user_input}")
+                list_of_found.append("data/json/{file_name}")
+        if len(list_of_found)==1:
+            self.parse_json(list_of_found[0])
+        elif len(list_of_found)>1:
+            for idx, option in enumerate(list_of_found):
+                self.print_list(f"{f'{idx})':>3}",option)
+        elif len(list_of_found)==0:
+            self.print_warning(f"No matching {user_input}")
 
     def parse_input(self,user_input1=""):
         if not user_input1:
@@ -475,6 +485,7 @@ class bib_manager:
         self.make_bib_name()
         self.make_bib_cite()
         self.print_all_fields()
+        self.print_cite()
 
     def finalize_entry(self):
         self.print_info(f"Finalize entry")
@@ -715,6 +726,7 @@ class bib_manager:
     def make_btag(self, field_value):
         for tag1 in field_value.split(','):
             tag1 = tag1.strip()
+            field_value.replace(" ","_")
             if not tag1:
                 continue
             if self.bib_fields["btag"][0]=='':
