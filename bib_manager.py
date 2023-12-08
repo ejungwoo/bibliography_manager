@@ -4,46 +4,39 @@ import os
 import sys
 import json
 import inspect
+from pathlib import Path
 
 class bib_manager:
 
     def __init__(self, user_input1="", user_input2="", user_input3=""):
-        #self.print_debug(f"{user_input1} {user_input2} {user_input3}")
+        self.init_manager()
+        run_option_explain = ([run_option[0] for run_option in self.run_options])
+        if user_input1:
+            if user_input1.find('.')>0:
+                self.parse_input(user_input1)
+            else:
+                self.navigate_title(user_input1)
+        else:
+            uidx, uvalue = self.enumerate_and_select_from_list(run_option_explain)
+            if uvalue:
+                self.run_options[uidx][1]()
+
+    def init_manager(self):
         self.sendout_debug = False
         self.sendout_process = True
         self.sendout_info = True
         self.sendout_warning = True
         self.sendout_error = True
         if self.sendout_process : self.sendout_info = True
-        self.init_manager()
-        run_option_numbers = ([run_option[0] for run_option in self.run_options])
-        run_option_explain = ([run_option[1] for run_option in self.run_options])
-        run_option_function = ([run_option[2] for run_option in self.run_options])
-        if user_input1 and user_input1 not in run_option_numbers:
-            if user_input1.find('.')>0:
-                self.parse_input(user_input1)
-            else:
-                self.navigate_title(user_input1)
-        elif user_input1 and user_input1 in run_option_numbers:
-            run_option_index = run_option_numbers.index(user_input1)
-            self.print_always(self.run_options[run_option_index][2])
-            self.run_options[run_option_index][2]()
-        else:
-            self.print_info("Usage of Bibliography Manager")
-            for idx in range(len(run_option_numbers)):
-                self.print_title(f"python3 bib_manager.py {run_option_numbers[idx]:20} # {run_option_explain[idx]}")
-            user_input_idx, user_input_value = self.enumerate_and_select_from_list(run_option_explain)
-            if user_input_value:
-                self.run_options[user_input_idx][2]()
-
-    def init_manager(self):
         self.clear_fields()
         self.run_options = [
-            ["0", 'navigate database',         self.navigate_database,       "nav", "navigate"],
-            ["1", 'write database from raw',   self.write_database_from_raw, "new"],
-            ["2", 'write database from input', self.parse_input,             "input"],
-            ["9", 'quite',                     self.exit_bib_manager,        "quit"]
+            ['Navigate database',         self.navigate_database      ],
+            ['Write database from raw',   self.write_database_from_raw],
+            ['Write database from input', self.parse_input            ],
+            ['Self optimize',             self.optimize_data           ],
+            ['Quite',                     self.exit_bib_manager       ]
         ]
+        self.navigate_options = ["json", "author", "tag", "collaboration"]
         self.collaboration_list = []
         self.journal_list = []
         self.dictionary_of_ris_formats = {}
@@ -205,7 +198,7 @@ class bib_manager:
             idxSelect = options.index(user_input)
         if idxSelect<0 and user_input.isdigit() and int(user_input)<=idxMax:
             idxSelect = int(user_input)
-        if idxSelect>0:
+        if idxSelect>=0 and idxSelect<len(options):
             keySelect = options[idxSelect]
             return idxSelect, keySelect
         return -1, ""
@@ -260,44 +253,97 @@ class bib_manager:
 
     def navigate_database(self, nav_option1="", nav_option2=""):
         self.print_info("Navigate database")
-        self.print_always()
-        navigate_options = ["name", "number", "type", "tag", "collaboration"]
-        navigate_options = {
-            "name":0,
-            "number":1,
-            "type":2,
-            "tag":3,
-            "collaboration":4
-        }
-        #input_option = self.input_options(navigate_options)[0]
-        #print(input_option)
-        #self.navigate_author()
-            #data/author
-        #for idx, option in enumerate(navigate_options):
-        #    self.print_list(f"{f'{idx})':>3}",option)
-        #question = "Enter option from above: "
-        #user_input = self.input_question(question)
-        #if user_input=="name":
-        #    pass
+        uidx, uvalue = self.enumerate_and_select_from_list(self.navigate_options)
+        navigate_type = uvalue
+        if navigate_type=="":
+            self.exit_bib_manager()
+        self.navigate_by_type(navigate_type)
 
-    def navigate_author(self):
-        list_of_files = os.listdir("data/author")
-        print(list_of_files)
+    def navigate_by_type(self,navigate_type,uvalue=""):
+        self.print_info(f"Navigate {navigate_type}")
+        original_path = f"data/{navigate_type}"
+        previous_path = original_path
+        if uvalue=="": current_path = f"data/{navigate_type}"
+        else: current_path = f"data/{navigate_type}/{uvalue}"
+        while True:
+            check_path = Path(current_path)
+            if check_path.is_file():
+                if uvalue.endswith(".json"): selected = f"data/json/{uvalue}"
+                else: selected = f"data/json/{uvalue}.json"
+                self.print_info(check_path)
+                self.print_info(selected)
+                self.parse_json(selected, just_print=True)
+                break
+            if check_path.is_dir():
+                list_of_files = os.listdir(current_path)
+                list_of_files.append("..")
+                list_of_files.append("top")
+                list_of_files.append("quite")
+                uidx, uvalue = self.enumerate_and_select_from_list(list_of_files)
+                print(uidx, uvalue)
+                if uvalue in ["quite",""]:
+                    break
+                if uvalue=="..":
+                    current_path = previous_path
+                    previous_path = original_path
+                    continue
+                elif uvalue=="top":
+                    current_path = original_path
+                    continue
+                else:
+                    previous_path = current_path
+                    current_path = f"{current_path}/{uvalue}"
+                    continue
+        self.exit_bib_manager()
 
     def navigate_title(self,user_input):
         list_of_files = os.listdir("data/json")
         list_of_found = []
+        ## collect list of files #####################################################
         for file_name in list_of_files:
             if file_name.find(user_input)>=0:
                 list_of_found.append(f"data/json/{file_name}")
+        ## select from list of files #################################################
         if len(list_of_found)==1:
             self.print_list(f"{f'1)':>3}",list_of_found[0])
-            self.parse_json(list_of_found[0])
+            selected = list_of_found[0]
         elif len(list_of_found)>1:
-            for idx, option in enumerate(list_of_found):
-                self.print_list(f"{f'{idx})':>3}",option)
+            uidx, uvalue = self.enumerate_and_select_from_list(list_of_found)
+            selected = uvalue
         elif len(list_of_found)==0:
             self.print_warning(f"No matching {user_input}")
+            return
+        ## parse or exit #############################################################
+        if len(selected)==0:
+            self.exit_bib_manager()
+        else:
+            self.parse_json(selected, just_print=True)
+
+    def optimize_data(self):
+        return
+        ## remove data except for json data ##########################################
+        #for navigate_option in self.navigate_options:
+        #    if navigate_option=="json":
+        #        continue
+        #    list_of_files = os.listdir(f"data/{navigate_option}")
+        #    pass
+        ## look for duplicate data ###################################################
+        list_of_files = os.listdir(f"data/json")
+        for file_name1 in list_of_files:
+            short_name = make_name_without_tag(file_name1)
+            for file_name2 in list_of_files:
+                if file_name1==file_name2:
+                    continue
+                if short_name in file_name2
+                self.confirm_remove_to_user(short_name, file_name1, file_name2)
+        ## rewrite data ##############################################################
+        list_of_files = os.listdir(f"data/json")
+        for file_name in list_of_files:
+            self.parse_json(f"data/json/{file_name}")
+            #self.write_entry()
+
+    def confirm_remove_to_user(self, short_name, file_name1, file_name2)
+        pass
 
     def parse_input(self,user_input1=""):
         if not user_input1:
@@ -310,12 +356,16 @@ class bib_manager:
         elif user_input1.endswith(".json"): self.parse_json(user_input1)
         else:                               self.parse_bibtex(user_input1)
 
-    def parse_json(self, user_input):
+    def parse_json(self, user_input, just_print=False):
         self.clear_fields()
         with open(user_input,'r') as file_json:
             self.bib_fields = json.load(file_json)
-        #self.print_all_fields()
-        self.confirm_entry()
+        if just_print:
+            self.print_all_fields()
+            self.make_bib_cite()
+            self.print_cite()
+        else:
+            self.confirm_entry()
 
     def parse_ris(self, input_file_name):
         f1 = open(input_file_name,'r')
