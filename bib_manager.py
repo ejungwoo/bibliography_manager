@@ -289,8 +289,9 @@ class bib_manager:
         list_of_found = []
         for file_name in list_of_files:
             if file_name.find(user_input)>=0:
-                list_of_found.append("data/json/{file_name}")
+                list_of_found.append(f"data/json/{file_name}")
         if len(list_of_found)==1:
+            self.print_list(f"{f'1)':>3}",list_of_found[0])
             self.parse_json(list_of_found[0])
         elif len(list_of_found)>1:
             for idx, option in enumerate(list_of_found):
@@ -381,6 +382,7 @@ class bib_manager:
             self.finalize_entry()
             self.confirm_entry()
             self.write_entry()
+            self.print_cite()
             if found_aa==False:
                 self.print_debug(lines)
                 break
@@ -646,7 +648,7 @@ class bib_manager:
         page = self.bib_fields["page1"]
         if len(name)>0:
             if len(self.bib_fields["author"])>1:
-                name = name + " et. al., "
+                name = name + " et al., "
             else:
                 name = name + ", "
         if len(jour)>0: jour = jour + " "
@@ -752,7 +754,7 @@ class bib_manager:
         elif len(field_value)>0:
             found_etnry = False
             for journal_entry in self.journal_list:
-                if journal_entry[0]==field_value:
+                if journal_entry[0]==field_value or journal_entry[2]==field_value:
                     self.bib_fields["journal"] = journal_entry
                     found_etnry = True
                     break
