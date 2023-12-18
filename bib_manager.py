@@ -33,7 +33,7 @@ class bib_manager:
             ['Navigate database',         self.navigate_database      ],
             ['Write database from raw',   self.write_database_from_raw],
             ['Write database from input', self.parse_input            ],
-            ['Self optimize',             self.optimize_data           ],
+            ['Self optimize',             self.optimize_data          ],
             ['Quite',                     self.exit_bib_manager       ]
         ]
         self.navigate_options = ["json", "author", "tag", "collaboration"]
@@ -320,7 +320,6 @@ class bib_manager:
             self.parse_json(selected, just_print=True)
 
     def optimize_data(self):
-        return
         ## remove data except for json data ##########################################
         #for navigate_option in self.navigate_options:
         #    if navigate_option=="json":
@@ -330,19 +329,25 @@ class bib_manager:
         ## look for duplicate data ###################################################
         list_of_files = os.listdir(f"data/json")
         for file_name1 in list_of_files:
-            short_name = make_name_without_tag(file_name1)
+            self.parse_json(f"data/json/{full_name}")
+            short_name = self.make_bib_name(True)
             for file_name2 in list_of_files:
                 if file_name1==file_name2:
                     continue
-                if short_name in file_name2
-                self.confirm_remove_to_user(short_name, file_name1, file_name2)
+                if short_name in file_name2:
+                    self.confirm_remove_to_user(short_name, file_name1, file_name2)
         ## rewrite data ##############################################################
         list_of_files = os.listdir(f"data/json")
         for file_name in list_of_files:
             self.parse_json(f"data/json/{file_name}")
             #self.write_entry()
 
-    def confirm_remove_to_user(self, short_name, file_name1, file_name2)
+    def make_name_without_tag(self, full_name):
+        pass
+
+    def confirm_remove_to_user(self, short_name, file_name1, file_name2):
+        self.input_question(f"{short_name} {file_name1} {file_name2}")
+        input_options
         pass
 
     def parse_input(self,user_input1=""):
@@ -668,7 +673,7 @@ class bib_manager:
             if field_value[-1]==',': field_value = field_value[:-1].strip()
         return lines, field_title, field_value
 
-    def make_bib_name(self):
+    def make_bib_name(self,make_short=False):
         self.print_debug(self.bib_fields["author"])
         name = self.make_author_name_flat(self.bib_fields["author"][0])
         colb = self.bib_fields["collaboration"][1]
@@ -684,9 +689,14 @@ class bib_manager:
         if len(volm)>0: volm = volm + "_"
         if len(page)>0: page = page + "_"
         if len(btag)>0: btag = btag + "_"
-        bib_name_new = name + colb + jour + year + volm + page + btag
-        bib_name_new = bib_name_new[:-1].strip()
-        self.bib_fields["bname"] = bib_name_new
+        if make_short:
+            bib_name_new = name + colb + jour + year + volm + page
+            bib_name_new = bib_name_new[:-1].strip()
+            self.bib_fields["sname"] = bib_name_new
+        else:
+            bib_name_new = name + colb + jour + year + volm + page + btag
+            bib_name_new = bib_name_new[:-1].strip()
+            self.bib_fields["bname"] = bib_name_new
         return bib_name_new
 
     def make_bib_cite(self):
@@ -974,6 +984,12 @@ class bib_manager:
 
 
 if __name__ == "__main__":
+    function_list = dir(bib_manager)
+    for function_name in function_list:
+        #if not function_name.find("__")==0:
+        if function_name.find("make")==0:
+            print(function_name)
+    #print('\n'.join(dir(bib_manager)))
     if   len(sys.argv)==2: bib_manager(sys.argv[1])
     elif len(sys.argv)==3: bib_manager(sys.argv[1],sys.argv[2])
     elif len(sys.argv)==4: bib_manager(sys.argv[1],sys.argv[2],sys.argv[3])
